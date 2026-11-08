@@ -118,6 +118,9 @@ Liegt in HA: 8 Raum-Automationen per Blueprint `claude/heizung.yaml`, min_max-Sc
 - Warnung `via_device` in DeviceInfo (veraltet ab 2027.8) → entfernt, lokal committet.
 - Warnung in HA 2026.11: Climate soll `native_*`-Temperatur-Eigenschaften nutzen (alte Namen bis 2027.11). Behoben, versionsabhängig (`_NATIVE`), Tests grün – **lokal committet, noch nicht gepusht** (wartet auf Release-Befehl; dann Version auf 0.1.1).
 
+- **2026-11-08 12:59 SCHARF GESCHALTET** (Hunters Anweisung): alle 11 alten Heizungs-Automationen per `automation.turn_off` deaktiviert (nicht gelöscht – Rückweg: wieder einschalten), danach Beobachtungsmodus aus (Optionen: Soll 21,0 / Hysterese 0,1 explizit mitgegeben, sonst setzt der Dialog die Werte vom Anlegen zurück).
+  - ACHTUNG: Anti-Blockierlauf ist damit aus und in ThermoCore noch nicht gebaut → vor dem Sommer nachrüsten.
+  - Beobachtung beim Umschalten: alte Flur-Automation hatte 1 Min vorher Flur-Ventil + Pumpe eingeschaltet; ThermoCore schloss das Ventil sofort (kein Bedarf), Pumpe läuft Nachlauf.
 - **Playbook offen:** HA-Playbook konnte nicht aktualisiert werden (PC-Shell startete nicht, Projektkopie „Local AI“ in diesem Projekt nicht erreichbar). Nachholen: ThermoCore, Dashboard `dashboard-thermocore`, Beobachtungsmodus parallel zu den 11 alten Heizungs-Automationen.
 
 ## Weitermachen
