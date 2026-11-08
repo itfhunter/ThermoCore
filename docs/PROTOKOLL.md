@@ -109,6 +109,12 @@ Liegt in HA: 8 Raum-Automationen per Blueprint `claude/heizung.yaml`, min_max-Sc
 - Logo: `custom_components/thermocore/brand/icon.png` (+@2x) aus Hunters rotem Heizkörper-Icon.
 - Nach Installation in Hunters HA: HA-Playbook (`playbooks/HA/PLAYBOOK.md`) um ThermoCore ergänzen (Regeln in `_REGELN.md`).
 
+## Installation bei Hunter (2026-11-08)
+- Über HACS/Marketplace installiert (v0.1.0), Hub eingerichtet. Hub-Gerät liegt in einem Bereich → Entity-IDs haben dessen Präfix; Karten finden Entitäten trotzdem (über Registry, nicht über Namen).
+- Räume und Pumpen sind noch NICHT angelegt.
+- Dashboard `dashboard-thermocore`: Panel-Ansicht mit `custom:thermocore-overview-card` (language en, theme dark).
+- Warnung in HA 2026.11: Climate soll `native_*`-Temperatur-Eigenschaften nutzen (alte Namen bis 2027.11). Behoben, versionsabhängig (`_NATIVE`), Tests grün – **lokal committet, noch nicht gepusht** (wartet auf Release-Befehl; dann Version auf 0.1.1).
+
 ## Weitermachen
 Code liegt lokal im Klon (lokaler Commit, nicht gepusht) und als Bundle im Claude-Projekt
 „HA INTEGRATION Heizungssteuerung“ unter `claude/thermocore/`. Nächster Schritt: lokaler Test-Install in Hunters HA im Beobachtungsmodus, danach Karten-Editor und Anti-Blockierlauf.
