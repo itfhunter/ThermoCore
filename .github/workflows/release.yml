@@ -1,0 +1,28 @@
+name: Release
+# Nur manuell: GitHub > Actions > Release > "Run workflow" mit Version (z. B. 0.1.0)
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version (ohne v), z. B. 0.1.0"
+        required: true
+permissions:
+  contents: write
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Version in manifest setzen
+        run: |
+          jq --arg v "${{ inputs.version }}" '.version=$v' custom_components/thermocore/manifest.json > m.tmp
+          mv m.tmp custom_components/thermocore/manifest.json
+      - name: ZIP bauen
+        run: cd custom_components/thermocore && zip -r ../../thermocore.zip . -x '__pycache__/*'
+      - name: Release erstellen
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ inputs.version }}
+          name: ThermoCore ${{ inputs.version }}
+          generate_release_notes: true
+          files: thermocore.zip

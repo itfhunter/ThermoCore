@@ -1,0 +1,100 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "ThermoCore",
+        "description": "Globale Einstellungen. Räume und Pumpen fügst du danach am Eintrag hinzu.",
+        "data": {
+          "target_temp": "Solltemperatur (global)",
+          "hysteresis": "Hysterese (global)",
+          "observe_only": "Beobachtungsmodus (nur rechnen, nicht schalten)"
+        }
+      }
+    },
+    "abort": {
+      "already_configured": "ThermoCore ist bereits eingerichtet."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Globale Einstellungen",
+        "data": {
+          "target_temp": "Solltemperatur (global)",
+          "hysteresis": "Hysterese (global)",
+          "observe_only": "Beobachtungsmodus (nur rechnen, nicht schalten)"
+        }
+      }
+    }
+  },
+  "config_subentries": {
+    "pump": {
+      "entry_type": "Pumpe",
+      "initiate_flow": {
+        "user": "Pumpe hinzufügen"
+      },
+      "step": {
+        "user": {
+          "title": "Pumpe",
+          "data": {
+            "name": "Name",
+            "pump_switch": "Pumpen-Schalter",
+            "lead_time": "Vorlauf (Ventile öffnen vor Pumpenstart)",
+            "follow_time": "Nachlauf"
+          }
+        },
+        "reconfigure": {
+          "title": "Pumpe ändern",
+          "data": {
+            "name": "Name",
+            "pump_switch": "Pumpen-Schalter",
+            "lead_time": "Vorlauf (Ventile öffnen vor Pumpenstart)",
+            "follow_time": "Nachlauf"
+          }
+        }
+      },
+      "abort": {
+        "reconfigure_successful": "Gespeichert."
+      }
+    },
+    "room": {
+      "entry_type": "Raum",
+      "initiate_flow": {
+        "user": "Raum hinzufügen"
+      },
+      "step": {
+        "user": {
+          "title": "Raum hinzufügen",
+          "data": {
+            "area_id": "Bereich",
+            "room_type": "Art der Heizung"
+          }
+        },
+        "devices": {
+          "title": "Geräte zuordnen",
+          "description": "Im Bereich gefunden: {found_sensors} Temperatursensor(en), {found_switches} Schalter. Leere Felder zum Überschreiben = globaler Wert.",
+          "data": {
+            "temp_sensor": "Temperatursensor",
+            "heat_switch": "Heizungs-Schalter (Stellantrieb)",
+            "pump_subentry_id": "Zugeordnete Pumpe",
+            "override_target": "Solltemperatur überschreiben",
+            "override_hysteresis": "Hysterese überschreiben",
+            "linked_climate": "Verknüpfte Klima-Entität (optional)"
+          }
+        }
+      },
+      "abort": {
+        "reconfigure_successful": "Gespeichert."
+      }
+    }
+  },
+  "selector": {
+    "room_type": {
+      "options": {
+        "floor": "Fußbodenheizung",
+        "radiator": "Heizkörper (geplant)",
+        "ac": "Klimagerät (geplant)"
+      }
+    }
+  }
+}

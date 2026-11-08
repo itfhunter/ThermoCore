@@ -1,0 +1,100 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "ThermoCore",
+        "description": "Global settings. Add rooms and pumps afterwards.",
+        "data": {
+          "target_temp": "Target temperature (global)",
+          "hysteresis": "Hysteresis (global)",
+          "observe_only": "Observe only (calculate, don't switch)"
+        }
+      }
+    },
+    "abort": {
+      "already_configured": "Already configured."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Global settings",
+        "data": {
+          "target_temp": "Target temperature (global)",
+          "hysteresis": "Hysteresis (global)",
+          "observe_only": "Observe only (calculate, don't switch)"
+        }
+      }
+    }
+  },
+  "config_subentries": {
+    "pump": {
+      "entry_type": "Pump",
+      "initiate_flow": {
+        "user": "Add pump"
+      },
+      "step": {
+        "user": {
+          "title": "Pump",
+          "data": {
+            "name": "Name",
+            "pump_switch": "Pump switch",
+            "lead_time": "Lead time (valves open before pump)",
+            "follow_time": "Follow-up time"
+          }
+        },
+        "reconfigure": {
+          "title": "Edit pump",
+          "data": {
+            "name": "Name",
+            "pump_switch": "Pump switch",
+            "lead_time": "Lead time (valves open before pump)",
+            "follow_time": "Follow-up time"
+          }
+        }
+      },
+      "abort": {
+        "reconfigure_successful": "Saved."
+      }
+    },
+    "room": {
+      "entry_type": "Room",
+      "initiate_flow": {
+        "user": "Add room"
+      },
+      "step": {
+        "user": {
+          "title": "Add room",
+          "data": {
+            "area_id": "Area",
+            "room_type": "Heating type"
+          }
+        },
+        "devices": {
+          "title": "Assign devices",
+          "description": "Found in area: {found_sensors} temperature sensor(s), {found_switches} switch(es). Empty override = global value.",
+          "data": {
+            "temp_sensor": "Temperature sensor",
+            "heat_switch": "Heating switch (actuator)",
+            "pump_subentry_id": "Assigned pump",
+            "override_target": "Override target temperature",
+            "override_hysteresis": "Override hysteresis",
+            "linked_climate": "Linked climate entity (optional)"
+          }
+        }
+      },
+      "abort": {
+        "reconfigure_successful": "Saved."
+      }
+    }
+  },
+  "selector": {
+    "room_type": {
+      "options": {
+        "floor": "Underfloor heating",
+        "radiator": "Radiator (planned)",
+        "ac": "Air conditioner (planned)"
+      }
+    }
+  }
+}
