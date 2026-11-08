@@ -29,7 +29,7 @@ class ThermoCoreEntity(Entity):
         else:
             self._attr_device_info = DeviceInfo(
                 identifiers={(DOMAIN, f"{entry_id}_{sid}")}, name=name, manufacturer="ThermoCore",
-                model="Pump" if sid in ctrl.pumps else "Room", via_device=(DOMAIN, entry_id),
+                model="Pump" if sid in ctrl.pumps else "Room",
             )
 
     async def async_added_to_hass(self) -> None:
