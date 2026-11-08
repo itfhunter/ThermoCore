@@ -1,6 +1,6 @@
 # ThermoCore – Entwicklungsprotokoll / Übergabe
 
-Stand: 2026-11-08 (Regelung fertig, 23 Tests grün) · Repo: github.com/itfhunter/ThermoCore (leer, NICHTS gepusht)
+Stand: 2026-11-08 (auf GitHub, Release v0.1.0 durch Hunter auszulösen) · Repo: github.com/itfhunter/ThermoCore (leer, NICHTS gepusht)
 
 ## Harte Regeln (vom Nutzer)
 - **Nie pushen/releasen ohne ausdrücklichen Release-Befehl von Hunter.** Release erfolgt dann automatisch über `.github/workflows/release.yml` (workflow_dispatch mit Version → Tag + GitHub-Release + ZIP für HACS).
@@ -99,6 +99,14 @@ Liegt in HA: 8 Raum-Automationen per Blueprint `claude/heizung.yaml`, min_max-Sc
 - Globale Werte/Overrides liegen im HA-Store `.storage/thermocore.<entry_id>`. Ändert man Soll/Hysterese im Konfigurationsdialog, gewinnt der Dialog; sonst der zuletzt per Entität/Karte gesetzte Wert.
 - Relais werden über `<domain>.turn_on/off` der jeweiligen Entität geschaltet (nicht nur `switch`).
 - Tests: `python -m pytest tests` in venv mit `pytest-homeassistant-custom-component`; Relais dort als `input_boolean` simuliert (ThermoCore lädt selbst die switch-Domäne).
+
+## Veröffentlichung (2026-11-08)
+- Release-Befehl von Hunter erhalten → Code auf `main` gepusht (Commit 2f2a7ce). Repo öffentlich.
+- GitHub-Prüfungen: hassfest ✅, Tests ✅ (23), HACS ✅ bis auf „Topics“ (nur für HACS-Standardliste nötig, nicht für benutzerdefiniertes Repo).
+- Release: Workflow läuft per Tag-Push `v*` ODER manuell (Actions → Release → Run workflow, Version eingeben).
+  Aus der Claude-Sitzung sind Tag-Pushes per Proxy gesperrt (403) und die gh-CLI hat kein Token → **Hunter löst v0.1.0 manuell aus.**
+- Logo: `custom_components/thermocore/brand/icon.png` (+@2x) aus Hunters rotem Heizkörper-Icon.
+- Nach Installation in Hunters HA: HA-Playbook (`playbooks/HA/PLAYBOOK.md`) um ThermoCore ergänzen (Regeln in `_REGELN.md`).
 
 ## Weitermachen
 Code liegt lokal im Klon (lokaler Commit, nicht gepusht) und als Bundle im Claude-Projekt
