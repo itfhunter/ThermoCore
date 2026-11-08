@@ -111,9 +111,14 @@ Liegt in HA: 8 Raum-Automationen per Blueprint `claude/heizung.yaml`, min_max-Sc
 
 ## Installation bei Hunter (2026-11-08)
 - Über HACS/Marketplace installiert (v0.1.0), Hub eingerichtet. Hub-Gerät liegt in einem Bereich → Entity-IDs haben dessen Präfix; Karten finden Entitäten trotzdem (über Registry, nicht über Namen).
-- Räume und Pumpen sind noch NICHT angelegt.
+- Pumpe (von Hunter angelegt): Shelly-Relais, Vorlauf 60 s, Nachlauf 60 s, Leistungssensor.
+- 8 Räume (von Claude angelegt, 1:1 aus alten Blueprint-Automationen: gleicher Sensor/Relais/Sollwert), alle an der einen Pumpe. Sollwert-Overrides wo der alte Sollwert ≠ 21 °C war. Globale Hysterese auf 0,1 K gesetzt (alt: Ein = Aus − 0,1). Beobachtungsmodus AN – alte Automationen laufen parallel weiter.
+- Anlegen per HA-MCP: `ha_config_set_helper(helper_type="config_subentry", entry_id, subentry_type="room", config={area_id, room_type, temp_sensor, heat_switch, pump_subentry_id, override_target})` – beide Flow-Schritte in einem Aufruf.
 - Dashboard `dashboard-thermocore`: Panel-Ansicht mit `custom:thermocore-overview-card` (language en, theme dark).
+- Warnung `via_device` in DeviceInfo (veraltet ab 2027.8) → entfernt, lokal committet.
 - Warnung in HA 2026.11: Climate soll `native_*`-Temperatur-Eigenschaften nutzen (alte Namen bis 2027.11). Behoben, versionsabhängig (`_NATIVE`), Tests grün – **lokal committet, noch nicht gepusht** (wartet auf Release-Befehl; dann Version auf 0.1.1).
+
+- **Playbook offen:** HA-Playbook konnte nicht aktualisiert werden (PC-Shell startete nicht, Projektkopie „Local AI“ in diesem Projekt nicht erreichbar). Nachholen: ThermoCore, Dashboard `dashboard-thermocore`, Beobachtungsmodus parallel zu den 11 alten Heizungs-Automationen.
 
 ## Weitermachen
 Code liegt lokal im Klon (lokaler Commit, nicht gepusht) und als Bundle im Claude-Projekt
