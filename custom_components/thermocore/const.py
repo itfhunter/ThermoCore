@@ -44,3 +44,15 @@ DEFAULT_PUMP_LEAD = 180
 DEFAULT_PUMP_FOLLOW = 60
 
 EVENT_ROOM_DEMAND = f"{DOMAIN}_room_demand"
+
+CONF_PUMP_POWER = "power_sensor"  # optionaler Leistungssensor der Pumpe (W)
+
+# Laufzeit-Speicher (vom Nutzer über Entitäten/Karten änderbar)
+STORAGE_VERSION = 1
+CHECK_INTERVAL = 300  # Sekunden: Failsafe – Soll-Zustände regelmäßig erneut durchsetzen
+UNAVAILABLE_GRACE = 300  # Sekunden: erst danach Reparaturmeldung (Neustart-Phase abfangen)
+
+
+def signal_update(entry_id: str) -> str:
+    """Dispatcher-Signal: Zustand des Controllers hat sich geändert."""
+    return f"{DOMAIN}_{entry_id}_update"

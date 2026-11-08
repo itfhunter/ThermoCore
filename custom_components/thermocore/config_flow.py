@@ -33,6 +33,7 @@ from .const import (
     CONF_PUMP,
     CONF_PUMP_FOLLOW,
     CONF_PUMP_LEAD,
+    CONF_PUMP_POWER,
     CONF_PUMP_SWITCH,
     CONF_ROOM_TYPE,
     CONF_TARGET_TEMP,
@@ -131,6 +132,9 @@ class PumpSubentryFlow(ConfigSubentryFlow):
                 ),
                 vol.Required(CONF_PUMP_LEAD, default=d.get(CONF_PUMP_LEAD, DEFAULT_PUMP_LEAD)): _SECONDS,
                 vol.Required(CONF_PUMP_FOLLOW, default=d.get(CONF_PUMP_FOLLOW, DEFAULT_PUMP_FOLLOW)): _SECONDS,
+                vol.Optional(CONF_PUMP_POWER, description={"suggested_value": d.get(CONF_PUMP_POWER)}): sel.EntitySelector(
+                    sel.EntitySelectorConfig(domain="sensor", device_class="power")
+                ),
             }
         )
 
@@ -200,7 +204,8 @@ class RoomSubentryFlow(ConfigSubentryFlow):
             ),
         }
         if pumps:
-            fields[vol.Optional(CONF_PUMP, description={"suggested_value": d.get(CONF_PUMP)})] = sel.SelectSelector(
+            default_pump = d.get(CONF_PUMP) or (pumps[0]["value"] if len(pumps) == 1 else None)
+            fields[vol.Optional(CONF_PUMP, description={"suggested_value": default_pump})] = sel.SelectSelector(
                 sel.SelectSelectorConfig(options=pumps, mode="dropdown")
             )
         fields[vol.Optional(CONF_OVERRIDE_TARGET, description={"suggested_value": d.get(CONF_OVERRIDE_TARGET)})] = _TEMP

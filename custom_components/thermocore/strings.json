@@ -40,7 +40,8 @@
             "name": "Name",
             "pump_switch": "Pump switch",
             "lead_time": "Lead time (valves open before pump)",
-            "follow_time": "Follow-up time"
+            "follow_time": "Follow-up time",
+            "power_sensor": "Power sensor (optional)"
           }
         },
         "reconfigure": {
@@ -49,7 +50,8 @@
             "name": "Name",
             "pump_switch": "Pump switch",
             "lead_time": "Lead time (valves open before pump)",
-            "follow_time": "Follow-up time"
+            "follow_time": "Follow-up time",
+            "power_sensor": "Power sensor (optional)"
           }
         }
       },
@@ -101,6 +103,59 @@
         "summer": "Summer",
         "manual": "Manual"
       }
+    }
+  },
+  "entity": {
+    "climate": {
+      "room": {
+        "name": "Thermostat"
+      }
+    },
+    "number": {
+      "base_target": {
+        "name": "Base target temperature"
+      },
+      "hysteresis": {
+        "name": "Hysteresis"
+      },
+      "target_override": {
+        "name": "Target override"
+      },
+      "hysteresis_override": {
+        "name": "Hysteresis override"
+      }
+    },
+    "switch": {
+      "heating": {
+        "name": "Heating"
+      },
+      "override_target": {
+        "name": "Override target"
+      },
+      "override_hysteresis": {
+        "name": "Override hysteresis"
+      }
+    },
+    "select": {
+      "operating_mode": {
+        "name": "Operating mode",
+        "state": {
+          "winter": "Winter",
+          "summer": "Summer",
+          "manual": "Manual"
+        }
+      }
+    },
+    "binary_sensor": {
+      "pump_running": {
+        "name": "Pump"
+      }
+    }
+  },
+  "issues": {
+    "room_unavailable": {
+      "title": "ThermoCore: {room} unavailable",
+      "description": "The temperature sensor or heating switch of {room} has been unavailable for at least 5 minutes. The room won't be heated until both are back."
     }
   }
 }

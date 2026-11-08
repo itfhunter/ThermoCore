@@ -40,7 +40,8 @@
             "name": "Name",
             "pump_switch": "Pumpen-Schalter",
             "lead_time": "Vorlauf (Ventile öffnen vor Pumpenstart)",
-            "follow_time": "Nachlauf"
+            "follow_time": "Nachlauf",
+            "power_sensor": "Leistungssensor (optional)"
           }
         },
         "reconfigure": {
@@ -49,7 +50,8 @@
             "name": "Name",
             "pump_switch": "Pumpen-Schalter",
             "lead_time": "Vorlauf (Ventile öffnen vor Pumpenstart)",
-            "follow_time": "Nachlauf"
+            "follow_time": "Nachlauf",
+            "power_sensor": "Leistungssensor (optional)"
           }
         }
       },
@@ -101,6 +103,59 @@
         "summer": "Sommer",
         "manual": "Manuell / Handbetrieb"
       }
+    }
+  },
+  "entity": {
+    "climate": {
+      "room": {
+        "name": "Thermostat"
+      }
+    },
+    "number": {
+      "base_target": {
+        "name": "Basis-Solltemperatur"
+      },
+      "hysteresis": {
+        "name": "Hysterese"
+      },
+      "target_override": {
+        "name": "Soll-Override"
+      },
+      "hysteresis_override": {
+        "name": "Hysterese-Override"
+      }
+    },
+    "switch": {
+      "heating": {
+        "name": "Heizung"
+      },
+      "override_target": {
+        "name": "Soll überschreiben"
+      },
+      "override_hysteresis": {
+        "name": "Hysterese überschreiben"
+      }
+    },
+    "select": {
+      "operating_mode": {
+        "name": "Betriebsart",
+        "state": {
+          "winter": "Winter",
+          "summer": "Sommer",
+          "manual": "Manuell / Handbetrieb"
+        }
+      }
+    },
+    "binary_sensor": {
+      "pump_running": {
+        "name": "Pumpe"
+      }
+    }
+  },
+  "issues": {
+    "room_unavailable": {
+      "title": "ThermoCore: {room} nicht erreichbar",
+      "description": "Temperatursensor oder Heizungs-Schalter von {room} liefert seit mindestens 5 Minuten keinen Wert. Der Raum wird nicht beheizt, bis beide wieder erreichbar sind."
     }
   }
 }

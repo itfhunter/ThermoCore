@@ -5,14 +5,15 @@
     "@itfhunter"
   ],
   "config_flow": true,
-  "dependencies": [
-    "frontend",
-    "http"
-  ],
+  "dependencies": [],
   "documentation": "https://github.com/itfhunter/ThermoCore",
   "integration_type": "hub",
   "iot_class": "calculated",
   "issue_tracker": "https://github.com/itfhunter/ThermoCore/issues",
   "requirements": [],
-  "version": "0.1.0"
+  "version": "0.1.0",
+  "after_dependencies": [
+    "frontend",
+    "http"
+  ]
 }

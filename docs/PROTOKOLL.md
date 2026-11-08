@@ -1,6 +1,6 @@
 # ThermoCore – Entwicklungsprotokoll / Übergabe
 
-Stand: 2026-11-08 (Nachtrag 13:00) · Repo: github.com/itfhunter/ThermoCore (leer, NICHTS gepusht)
+Stand: 2026-11-08 (Regelung fertig, 23 Tests grün) · Repo: github.com/itfhunter/ThermoCore (leer, NICHTS gepusht)
 
 ## Harte Regeln (vom Nutzer)
 - **Nie pushen/releasen ohne ausdrücklichen Release-Befehl von Hunter.** Release erfolgt dann automatisch über `.github/workflows/release.yml` (workflow_dispatch mit Version → Tag + GitHub-Release + ZIP für HACS).
@@ -78,20 +78,28 @@ Liegt in HA: 8 Raum-Automationen per Blueprint `claude/heizung.yaml`, min_max-Sc
 - [x] Gerüst: manifest, hacs.json, const, __init__, config_flow (Hub + Pumpe + Raum), Übersetzungen de/en
 - [x] Release-Workflow (manuell) + Validierungs-Workflow (hassfest, HACS)
 - [x] Raumtypen zusammengelegt (heating/ac), Betriebsarten-Konstanten, Icons abgelegt
-- [ ] `climate.py` – Raum-Thermostat mit Hysterese-Regelung
-- [ ] Entitäten für Karten: number/switch/select (siehe Abschnitt Karten)
-- [x] Karten 1–3 gebaut (`frontend/thermocore-cards.src.js` → Build `tools/build_cards.py` → `thermocore-cards.js`), Design dark + light (+auto), de/en, Icons von Hunter als Masken. Vorschau: `preview/thermocore-cards-preview.html` (Mock-Daten, erfundene Räume). In Chrome headless getestet: keine Fehler, Klicks lösen richtige Services aus.
-- [x] Karten registrieren sich selbst (`async_setup`: statischer Pfad `/thermocore/thermocore-cards.js` + `add_extra_js_url`)
-- [ ] Karten-Editor (UI-Konfiguration statt YAML) – noch offen
-- [ ] Karten gegen echte HA-Instanz testen (erst wenn Entitäten existieren)
-- [ ] `coordinator.py` – Pumpenlogik (Vorlauf/Nachlauf, Bedarf aus zugeordneten Räumen)
-- [ ] `binary_sensor.py` – Pumpenbedarf, `switch.py` – Heizperiode/Beobachtungsmodus
-- [ ] Repair-Issues bei Ausfall
-- [ ] Tests (pytest-homeassistant-custom-component), erfundene IDs
-- [ ] Anti-Blockierlauf
-- [ ] README mit Screenshots
-- [ ] Lokaler Test-Install in HA (per Datei-Kopie, NICHT über GitHub)
+- [x] Regelung gebaut (2026-11-08 nachmittags):
+  - `logic.py` Regelkern ohne HA (Hysterese, Pumpen-Vorlauf/Nachlauf) – 7 Unit-Tests
+  - `controller.py` verbindet Kern mit HA: lauscht auf Temperatur/Relais/Pumpe, Failsafe alle 5 Min (Soll-Zustände erneut durchsetzen), Ereignis `thermocore_room_demand` (mit `api_version`), Reparaturmeldung wenn Sensor/Relais > 5 Min weg
+  - Entitäten exakt nach Karten-Schnittstelle: climate, number, switch, select, binary_sensor (+ `entity.py` Basis, Geräte: Hub / je Raum / je Pumpe)
+  - Pumpe: optionaler Leistungssensor (W) im Pumpen-Dialog; bei nur einer Pumpe wird sie im Raum vorbelegt
+- [x] Tests in echter HA-Testumgebung (pytest-homeassistant-custom-component, HA 2026.2): **23/23 grün** – Einrichtung inkl. Bereichs-Vorauswahl, Heizen/Stoppen, Hysterese-Band, Overrides, Beobachtungsmodus schaltet nie, Sommer/Manuell, Raum Stopp, Sensor-Ausfall = Ventil zu, Pumpen-Vorlauf, Raum ohne Pumpe, Werte überleben Neustart, Bedarfs-Ereignis
+- [x] Karten-Registrierung hängt nicht mehr hart am Frontend (`after_dependencies`), damit Tests/Headless laufen
+- [ ] Karten-Editor (UI-Konfiguration statt YAML)
+- [ ] Anti-Blockierlauf (Sommer, 1. des Monats – wie bisherige Anlage)
+- [ ] README (de/en) mit Screenshots aus der Vorschau
+- [ ] Lokaler Test-Install in Hunters HA (Datei-Kopie, NICHT über GitHub), Beobachtungsmodus parallel zu alten Automationen
+- [ ] Klima-Typ `ac` (Mindestlauf/-pause, Bewegung, Mindesttemp)
+
+### Verhalten (wichtig für Weiterarbeit)
+- Hysterese: Heizen ab Ist < Soll − Hysterese, Stopp ab Ist ≥ Soll, dazwischen bleibt Zustand.
+- Heizen nur wenn: Betriebsart Winter UND Heizung an UND Raum aktiv UND Messwert gültig.
+- Sommer / Heizung aus: Ventile und Pumpen werden aus­geschaltet. Manuell: ThermoCore schaltet gar nichts. Beobachtungsmodus: rechnet alles, schaltet nichts.
+- Soll am Thermostat setzen = Raum-Override einschalten mit diesem Wert.
+- Globale Werte/Overrides liegen im HA-Store `.storage/thermocore.<entry_id>`. Ändert man Soll/Hysterese im Konfigurationsdialog, gewinnt der Dialog; sonst der zuletzt per Entität/Karte gesetzte Wert.
+- Relais werden über `<domain>.turn_on/off` der jeweiligen Entität geschaltet (nicht nur `switch`).
+- Tests: `python -m pytest tests` in venv mit `pytest-homeassistant-custom-component`; Relais dort als `input_boolean` simuliert (ThermoCore lädt selbst die switch-Domäne).
 
 ## Weitermachen
 Code liegt lokal im Klon (lokaler Commit, nicht gepusht) und als Bundle im Claude-Projekt
-„HA INTEGRATION Heizungssteuerung“ unter `claude/thermocore/`. Nächster Schritt: Plattformen nach obiger Entitäts-Schnittstelle bauen (climate, number, switch, select, binary_sensor) inkl. Regel- und Pumpenlogik.
+„HA INTEGRATION Heizungssteuerung“ unter `claude/thermocore/`. Nächster Schritt: lokaler Test-Install in Hunters HA im Beobachtungsmodus, danach Karten-Editor und Anti-Blockierlauf.
