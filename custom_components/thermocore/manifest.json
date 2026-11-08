@@ -1,9 +1,14 @@
 {
   "domain": "thermocore",
   "name": "ThermoCore",
-  "codeowners": ["@itfhunter"],
+  "codeowners": [
+    "@itfhunter"
+  ],
   "config_flow": true,
-  "dependencies": [],
+  "dependencies": [
+    "frontend",
+    "http"
+  ],
   "documentation": "https://github.com/itfhunter/ThermoCore",
   "integration_type": "hub",
   "iot_class": "calculated",

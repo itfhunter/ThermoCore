@@ -1,6 +1,6 @@
 # ThermoCore – Entwicklungsprotokoll / Übergabe
 
-Stand: 2026-11-08 (Nachtrag 12:30) · Repo: github.com/itfhunter/ThermoCore (leer, NICHTS gepusht)
+Stand: 2026-11-08 (Nachtrag 13:00) · Repo: github.com/itfhunter/ThermoCore (leer, NICHTS gepusht)
 
 ## Harte Regeln (vom Nutzer)
 - **Nie pushen/releasen ohne ausdrücklichen Release-Befehl von Hunter.** Release erfolgt dann automatisch über `.github/workflows/release.yml` (workflow_dispatch mit Version → Tag + GitHub-Release + ZIP für HACS).
@@ -49,11 +49,19 @@ Vorlage-Optik: dunkles Kartendesign laut Screenshot von Hunter (blaue Akzente, a
 
 Dafür benötigte Entitäten pro Raum (noch zu bauen): `climate` (Ist/Soll/Ein-Aus), `switch` Soll-Override, `number` Override-Soll, `switch` Hysterese-Override, `number` Override-Hysterese. Global: `number` Basis-Soll, `number` Hysterese, `switch` Heizung, `select` Betriebsart, `binary_sensor` je Pumpe.
 
+### Entitäts-Schnittstelle der Karten (VERBINDLICH für die Plattformen)
+Karten finden alles über `hass.entities` mit `platform == "thermocore"` + `translation_key`; Raum-Entitäten über gleiche `device_id`.
+- Hub-Gerät: `number` key `base_target` (min/max/step) · `number` `hysteresis` · `switch` `heating` · `select` `operating_mode` (Optionen `winter|summer|manual`)
+- Je Pumpe ein Gerät: `binary_sensor` `pump_running` (Attribut `power` in W optional, aus verknüpftem Leistungssensor)
+- Je Raum ein Gerät: `climate` `room` (current_temperature, temperature, hvac_mode `heat|off`, hvac_action `heating|idle|off`) · `switch` `override_target` · `number` `target_override` · `switch` `override_hysteresis` · `number` `hysteresis_override`
+- Aktiv/Stopp = `climate.set_hvac_mode` heat/off
+- Karten-Konfig: Karte 1 `{theme}` · Karte 2 `{entity, show_overrides, show_start_stop, theme}` · Karte 3 `{show_overrides, show_start_stop, theme}` · `theme`: dark|light|auto · optional `language`: de|en
+
 ### Icons
 Von Hunter geliefert, liegen in `assets/icons/` (PNG): radiator_red/white, minus(_circle_blue), plus(_circle_blue), power_blue/white, pump_grey/yellow, summer, winter, thermometer_blue, manual, home.
 Hinweis: Viele sind weiß auf transparent. Für die Karten besser die passenden MDI-Icons nehmen (färben sich mit dem Theme, scharf in jeder Größe):
 radiator→`mdi:radiator`, power→`mdi:power`, plus/minus→`mdi:plus-circle-outline`/`mdi:minus-circle-outline`, pump→`mdi:pump` oder `mdi:fan`, summer→`mdi:white-balance-sunny`, winter→`mdi:snowflake`, manual→`mdi:hand-back-right-outline`, thermometer→`mdi:thermometer`, home→`mdi:home-outline`.
-Das rote Heizkörper-Icon ist Kandidat fürs Integrations-Logo. Entscheidung PNG vs. MDI: offen, bei Hunter nachfragen.
+Entscheidung Hunter: SEINE Icons verwenden. Umgesetzt als CSS-Masken (Form aus PNG, Farbe aus Design) → funktionieren dunkel und hell. Rotes Heizkörper-Icon = Kandidat Integrations-Logo.
 
 ## Kopplung mit späterer Klima-Integration
 - ThermoCore bleibt Hub für **Bedarf pro Raum**. Jeder Raum veröffentlicht:
@@ -72,7 +80,10 @@ Liegt in HA: 8 Raum-Automationen per Blueprint `claude/heizung.yaml`, min_max-Sc
 - [x] Raumtypen zusammengelegt (heating/ac), Betriebsarten-Konstanten, Icons abgelegt
 - [ ] `climate.py` – Raum-Thermostat mit Hysterese-Regelung
 - [ ] Entitäten für Karten: number/switch/select (siehe Abschnitt Karten)
-- [ ] Karten 1–3 (`frontend/thermocore-cards.js`), de/en
+- [x] Karten 1–3 gebaut (`frontend/thermocore-cards.src.js` → Build `tools/build_cards.py` → `thermocore-cards.js`), Design dark + light (+auto), de/en, Icons von Hunter als Masken. Vorschau: `preview/thermocore-cards-preview.html` (Mock-Daten, erfundene Räume). In Chrome headless getestet: keine Fehler, Klicks lösen richtige Services aus.
+- [x] Karten registrieren sich selbst (`async_setup`: statischer Pfad `/thermocore/thermocore-cards.js` + `add_extra_js_url`)
+- [ ] Karten-Editor (UI-Konfiguration statt YAML) – noch offen
+- [ ] Karten gegen echte HA-Instanz testen (erst wenn Entitäten existieren)
 - [ ] `coordinator.py` – Pumpenlogik (Vorlauf/Nachlauf, Bedarf aus zugeordneten Räumen)
 - [ ] `binary_sensor.py` – Pumpenbedarf, `switch.py` – Heizperiode/Beobachtungsmodus
 - [ ] Repair-Issues bei Ausfall
@@ -83,4 +94,4 @@ Liegt in HA: 8 Raum-Automationen per Blueprint `claude/heizung.yaml`, min_max-Sc
 
 ## Weitermachen
 Code liegt lokal im Klon (lokaler Commit, nicht gepusht) und als Bundle im Claude-Projekt
-„HA INTEGRATION Heizungssteuerung“ unter `claude/thermocore/`. Nächster Schritt: `climate.py`.
+„HA INTEGRATION Heizungssteuerung“ unter `claude/thermocore/`. Nächster Schritt: Plattformen nach obiger Entitäts-Schnittstelle bauen (climate, number, switch, select, binary_sensor) inkl. Regel- und Pumpenlogik.
