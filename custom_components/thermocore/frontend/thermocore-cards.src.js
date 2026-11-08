@@ -1,5 +1,5 @@
 /* ThermoCore Dashboard-Karten (de/en, Design dark/light/auto). Icons werden beim Build eingesetzt (__ICONS__). */
-const TC_VERSION = "0.1.0";
+const TC_VERSION = "0.1.1";
 const ICONS = __ICONS__;
 
 const I18N = {
@@ -77,7 +77,7 @@ input.val::-webkit-inner-spin-button{opacity:.4}
 .room-head .name{font-size:20px;font-weight:600}
 .temps{display:flex;justify-content:space-around;font-size:17px;padding:4px 0 10px;border-bottom:1px solid var(--tc-border);margin-bottom:8px}
 .temps b{font-weight:600}
-.ovr{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:8px;align-items:center;padding:4px 0;font-size:14px;line-height:1.25}
+.ovr{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:6px;align-items:center;padding:4px 0;font-size:14px;line-height:1.25}
 .ovr .seg button{padding:4px 10px}
 .unit{display:flex;align-items:center;border:1px solid var(--tc-border);border-radius:10px;background:var(--tc-card);padding:0 8px 0 0;font-weight:600}
 .unit.dim{opacity:.45}
@@ -85,6 +85,19 @@ input.val::-webkit-inner-spin-button{opacity:.4}
 .unit input::-webkit-inner-spin-button,.unit input::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}
 .unit input:focus{outline:none}
 .startstop{margin-top:10px}
+button.unit{cursor:pointer;padding:5px 8px;font-size:15px;color:var(--tc-text);min-width:70px;justify-content:center}
+button.unit.open{border-color:var(--tc-accent);box-shadow:0 0 0 1px var(--tc-accent)}
+.sl{background:var(--tc-tile);border:1px solid var(--tc-accent);border-radius:12px;padding:6px 10px 10px;margin:2px 0 8px}
+.slh{display:flex;align-items:center;justify-content:center;position:relative;margin-bottom:4px}
+.slh .x{position:absolute;right:0}
+.slr{display:flex;align-items:center;gap:8px}
+.sl .rbtn{width:34px;height:34px}.sl .rbtn .ic{width:34px;height:34px}
+.sl b{font-size:24px;font-weight:700}
+.sl .x{width:28px;height:28px;border-radius:50%;color:var(--tc-muted);font-size:20px;line-height:1}
+.range{flex:1;min-width:60px;-webkit-appearance:none;appearance:none;height:8px;border-radius:999px;outline:none;margin:0;
+ background:linear-gradient(to right,var(--tc-accent) 0,var(--tc-accent) var(--p),var(--tc-track) var(--p),var(--tc-track) 100%)}
+.range::-webkit-slider-thumb{-webkit-appearance:none;width:24px;height:24px;border-radius:50%;background:var(--tc-accent);border:3px solid #fff;cursor:pointer}
+.range::-moz-range-thumb{width:20px;height:20px;border-radius:50%;background:var(--tc-accent);border:3px solid #fff;cursor:pointer}
 .selected{border-color:var(--tc-accent);box-shadow:0 0 0 1px var(--tc-accent)}
 .overview{display:grid;grid-template-columns:minmax(260px,1fr) 2fr;gap:16px;background:var(--tc-bg);border-radius:18px;padding:16px;color:var(--tc-text)}
 .ogrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:12px}
@@ -109,6 +122,13 @@ class TCBase extends HTMLElement {
     this.setAttribute("data-theme", th);
   }
   _st(id) { return id ? this._hass?.states?.[id] : undefined; }
+  /* Wert setzen; Override wird dabei automatisch eingeschaltet */
+  _commit(numId, swId, value) {
+    const v = Math.round(parseFloat(String(value).replace(",", ".")) * 10) / 10;
+    if (isNaN(v)) return;
+    this._call("number", "set_value", { entity_id: numId, value: v });
+    if (swId && this._st(swId)?.state !== "on") this._call("homeassistant", "turn_on", { entity_id: swId });
+  }
   _call(domain, service, data) { return this._hass.callService(domain, service, data); }
   /* ThermoCore-Entitäten über Registry finden: platform + translation_key */
   _tc() { return Object.values(this._hass?.entities || {}).filter((e) => e.platform === "thermocore"); }
@@ -121,6 +141,16 @@ class TCBase extends HTMLElement {
       .map((e) => e.entity_id).sort((a, b) => (this._st(a)?.attributes?.friendly_name || a).localeCompare(this._st(b)?.attributes?.friendly_name || b));
   }
   _bind(root) {
+    root.querySelectorAll("input.range").forEach((el) => {
+      const lbl = el.closest(".sl")?.querySelector(".slv");
+      const show = () => {
+        const p = ((el.value - el.min) / (el.max - el.min)) * 100;
+        el.style.setProperty("--p", `${p}%`); if (lbl) lbl.textContent = `${fmt(el.value)} °C`;
+      };
+      el.addEventListener("pointerdown", () => { this._dragging = true; });
+      el.addEventListener("input", (e) => { e.stopPropagation(); this._dragging = true; show(); });
+      el.addEventListener("change", (e) => { e.stopPropagation(); this._dragging = false; this._commit(el.dataset.id, el.dataset.sw, el.value); });
+    });
     root.querySelectorAll("[data-act]").forEach((el) => {
       const ev = el.tagName === "INPUT" ? "change" : "click";
       el.addEventListener(ev, (e) => { e.stopPropagation(); this._act(el.dataset.act, el.dataset.id, el, e); });
@@ -138,6 +168,12 @@ class TCBase extends HTMLElement {
         return this._call("number", "set_value", { entity_id: id, value: v });
       }
       case "set": { const v = parseFloat(String(el.value).replace(",", ".")); if (!isNaN(v)) this._call("number", "set_value", { entity_id: id, value: v }); return; }
+      case "slider": this._open = this._open === id ? null : id; this._dragging = false; return this._render();
+      case "sstep": {
+        const r = el.closest(".sl").querySelector("input.range");
+        const v = Math.min(+r.max, Math.max(+r.min, Math.round((+r.value + Number(r.step) * Number(el.dataset.dir)) * 10) / 10));
+        r.value = v; r.dispatchEvent(new Event("input")); return this._commit(id, el.dataset.sw, v);
+      }
       case "mode": return this._call("select", "select_option", { entity_id: id, option: el.dataset.opt });
       case "hvac": return this._call("climate", "set_hvac_mode", { entity_id: id, hvac_mode: el.dataset.opt });
     }
@@ -236,7 +272,8 @@ function roomHTML(card, climateId, cfg) {
     if (!sw || !num) return "";
     return `<div class="ovr"><span>${label}</span>
       <div class="seg sm"><button class="${on ? "on" : ""}" data-act="on" data-id="${sw}">${t.yes}</button><button class="${on ? "" : "on"}" data-act="off" data-id="${sw}">${t.no}</button></div>
-      <label class="unit ${on ? "" : "dim"}"><input type="number" inputmode="decimal" step="${ns?.attributes?.step || 0.1}" value="${Number(ns?.state).toFixed(1)}" data-act="set" data-id="${num}" ${on ? "" : "disabled"}>°C</label></div>`;
+      <button class="unit ${on ? "" : "dim"} ${card._open === num ? "open" : ""}" data-act="slider" data-id="${num}">${fmt(ns?.state)} °C</button></div>
+      ${card._open === num ? sliderHTML(card, num, sw) : ""}`;
   };
   return `<div class="card ${a.hvac_action === "heating" && !off ? "selected" : ""}">
     <div class="room-head" style="color:${a.hvac_action === "heating" && !off ? "var(--tc-heat)" : "var(--tc-text)"}">${ic("radiator")}
@@ -245,6 +282,18 @@ function roomHTML(card, climateId, cfg) {
     ${cfg.show_overrides ? ovRow(t.ovTarget, "override_target", "target_override") + ovRow(t.ovHyst, "override_hysteresis", "hysteresis_override") : ""}
     ${cfg.show_start_stop ? `<div class="seg wide startstop"><button class="${off ? "" : "on"}" data-act="hvac" data-opt="heat" data-id="${climateId}">${t.active}</button><button class="${off ? "on" : ""}" data-act="hvac" data-opt="off" data-id="${climateId}">${t.stop}</button></div>` : ""}
   </div>`;
+}
+
+function sliderHTML(card, num, sw) {
+  const a = card._st(num)?.attributes || {}, min = Number(a.min ?? 5), max = Number(a.max ?? 30), step = Number(a.step || 0.1);
+  const v = Number(card._st(num)?.state), p = ((v - min) / (max - min)) * 100;
+  return `<div class="sl">
+    <div class="slh"><b class="slv">${fmt(v)} °C</b><button class="x" data-act="slider" data-id="${num}" aria-label="close">×</button></div>
+    <div class="slr">
+      <button class="rbtn" data-act="sstep" data-dir="-1" data-id="${num}" data-sw="${sw}" aria-label="-">${ic("minus_circle")}</button>
+      <input class="range" type="range" min="${min}" max="${max}" step="${step}" value="${v}" style="--p:${p}%" data-id="${num}" data-sw="${sw}">
+      <button class="rbtn" data-act="sstep" data-dir="1" data-id="${num}" data-sw="${sw}" aria-label="+">${ic("plus_circle")}</button>
+    </div></div>`;
 }
 
 class ThermoCoreRoomCard extends TCBase {
@@ -256,6 +305,7 @@ class ThermoCoreRoomCard extends TCBase {
   _render() {
     if (!this._hass) return;
     this._theme();
+    if (this._dragging) return;
     this.shadowRoot.innerHTML = `<style>${CSS}</style>${roomHTML(this, this._cfg.entity, this._cfg)}`;
     this._bind(this.shadowRoot);
   }
