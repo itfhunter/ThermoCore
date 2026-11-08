@@ -122,6 +122,8 @@ Liegt in HA: 8 Raum-Automationen per Blueprint `claude/heizung.yaml`, min_max-Sc
   - ACHTUNG: Anti-Blockierlauf ist damit aus und in ThermoCore noch nicht gebaut → vor dem Sommer nachrüsten.
   - Beobachtung beim Umschalten: alte Flur-Automation hatte 1 Min vorher Flur-Ventil + Pumpe eingeschaltet; ThermoCore schloss das Ventil sofort (kein Bedarf), Pumpe läuft Nachlauf.
 - **v0.1.1 (2026-11-08):** Raumkarte – Klick auf Override-Wert öffnet Slider im Kartendesign (Wert groß, −/+ in 0,1-Schritten, Ziehen; Setzen schaltet Override automatisch ein; kein Neuzeichnen während des Ziehens – vorher überschrieb jedes HA-Update das Zahlenfeld). Dazu Fixes native_*-Climate-Eigenschaften und via_device. Auf Hunters Anweisung gepusht → Auto-Release.
+- **v0.1.2 (lokal, NICHT gepusht – wartet auf Release-Befehl):** visuelle Editoren für alle 3 Karten (HA `ha-form`, de/en; Raumkarte: Raum-Auswahl nur ThermoCore-Thermostate, Overrides/Aktiv-Stopp/Design/Sprache; Übersicht: Overrides/Aktiv-Stopp/Design/Sprache; Steuerung: Design/Sprache). Editor schreibt nur eigene Felder, „Sprache automatisch“ entfernt den Schlüssel. Übersicht bricht nach Kartenbreite um (Container-Query) statt Fensterbreite. Getestet mit ha-form-Attrappe im Browser; echtes ha-form erst in HA prüfbar.
+- Offene Frage an Hunter: deutsche Bezeichnung „Hysterese“ → „Schaltdifferenz“ umbenennen?
 - **Playbook offen:** HA-Playbook konnte nicht aktualisiert werden (PC-Shell startete nicht, Projektkopie „Local AI“ in diesem Projekt nicht erreichbar). Nachholen: ThermoCore, Dashboard `dashboard-thermocore`, Beobachtungsmodus parallel zu den 11 alten Heizungs-Automationen.
 
 ## Weitermachen

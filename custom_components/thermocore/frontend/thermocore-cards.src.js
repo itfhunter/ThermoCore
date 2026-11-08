@@ -1,5 +1,5 @@
 /* ThermoCore Dashboard-Karten (de/en, Design dark/light/auto). Icons werden beim Build eingesetzt (__ICONS__). */
-const TC_VERSION = "0.1.1";
+const TC_VERSION = "0.1.2";
 const ICONS = __ICONS__;
 
 const I18N = {
@@ -22,7 +22,7 @@ const I18N = {
 };
 
 const CSS = `
-:host{display:block}
+:host{display:block;container-type:inline-size}
 :host{--tc-bg:#0f1a26;--tc-card:#15212f;--tc-tile:#1b2a3b;--tc-border:#26384c;--tc-text:#f2f6fa;
  --tc-muted:#9fb0c2;--tc-accent:#13a3ff;--tc-accent-text:#ffffff;--tc-track:#2c3d50;--tc-seg:#24364a;
  --tc-heat:#ff6b3d;--tc-ok:#35c27a;--tc-warn:#f2b73c;--tc-err:#ff5252;--tc-pump:#f6c445}
@@ -101,7 +101,7 @@ button.unit.open{border-color:var(--tc-accent);box-shadow:0 0 0 1px var(--tc-acc
 .selected{border-color:var(--tc-accent);box-shadow:0 0 0 1px var(--tc-accent)}
 .overview{display:grid;grid-template-columns:minmax(260px,1fr) 2fr;gap:16px;background:var(--tc-bg);border-radius:18px;padding:16px;color:var(--tc-text)}
 .ogrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:12px}
-@media (max-width:760px){.overview{grid-template-columns:1fr}}
+@container (max-width:760px){.overview{grid-template-columns:1fr}}
 .warn{color:var(--tc-warn);font-size:13px;margin-top:6px}
 `;
 
@@ -326,6 +326,79 @@ class ThermoCoreOverviewCard extends TCBase {
     this._bind(this.shadowRoot); ThermoCoreControlCard.prototype._bindDial.call(this);
   }
 }
+
+/* ---------- Visuelle Editoren (ha-form) ---------- */
+const ED_I18N = {
+  de: { entity: "Raum (ThermoCore-Thermostat)", show_overrides: "Overrides anzeigen (Soll / Hysterese)",
+        show_start_stop: "Aktiv / Stopp anzeigen", theme: "Design", language: "Sprache",
+        dark: "Dunkel", light: "Hell", auto: "Automatisch (HA-Design)", lang_auto: "Automatisch (HA-Sprache)" },
+  en: { entity: "Room (ThermoCore thermostat)", show_overrides: "Show overrides (target / hysteresis)",
+        show_start_stop: "Show active / stop", theme: "Theme", language: "Language",
+        dark: "Dark", light: "Light", auto: "Automatic (HA theme)", lang_auto: "Automatic (HA language)" },
+};
+
+async function ensureHaForm() {
+  if (customElements.get("ha-form")) return;
+  try { /* lädt ha-form über einen eingebauten Karten-Editor */
+    const helpers = await window.loadCardHelpers?.();
+    const c = await helpers?.createCardElement({ type: "entities", entities: [] });
+    await c?.constructor?.getConfigElement?.();
+  } catch (e) { /* ignorieren – Fallback unten */ }
+  await Promise.race([customElements.whenDefined("ha-form"), new Promise((r) => setTimeout(r, 3000))]);
+}
+
+class TCEditor extends HTMLElement {
+  setConfig(cfg) { this._cfg = { ...cfg }; this._render(); }
+  set hass(h) { this._hass = h; this._render(); }
+  get _t() { const l = (this._hass?.locale?.language || this._hass?.language || "en").slice(0, 2); return ED_I18N[l] || ED_I18N.en; }
+  _schema() {
+    const t = this._t, fields = this.constructor.fields;
+    const all = {
+      entity: { name: "entity", required: true, selector: { entity: { domain: "climate", integration: "thermocore" } } },
+      show_overrides: { name: "show_overrides", selector: { boolean: {} } },
+      show_start_stop: { name: "show_start_stop", selector: { boolean: {} } },
+      theme: { name: "theme", selector: { select: { mode: "dropdown", options: [
+        { value: "dark", label: t.dark }, { value: "light", label: t.light }, { value: "auto", label: t.auto }] } } },
+      language: { name: "language", selector: { select: { mode: "dropdown", options: [
+        { value: "auto", label: t.lang_auto }, { value: "de", label: "Deutsch" }, { value: "en", label: "English" }] } } },
+    };
+    return fields.map((f) => all[f]);
+  }
+  async _render() {
+    if (!this._hass || !this._cfg) return;
+    if (!this._form) {
+      await ensureHaForm();
+      if (this._form) return;
+      this._form = document.createElement("ha-form");
+      this._form.addEventListener("value-changed", (e) => {
+        e.stopPropagation();
+        const fields = this.constructor.fields, v = e.detail.value || {};
+        const cfg = { ...this._cfg };
+        for (const f of fields) if (v[f] !== undefined) cfg[f] = v[f];
+        if (!cfg.language || cfg.language === "auto") delete cfg.language;
+        this._cfg = cfg;
+        this.dispatchEvent(new CustomEvent("config-changed", { detail: { config: cfg }, bubbles: true, composed: true }));
+      });
+      this.appendChild(this._form);
+    }
+    const defaults = { theme: "dark", show_overrides: true, show_start_stop: true, language: "auto" };
+    const d = {};
+    for (const f of this.constructor.fields) d[f] = this._cfg[f] ?? defaults[f];
+    this._form.hass = this._hass;
+    this._form.data = d;
+    this._form.schema = this._schema();
+    this._form.computeLabel = (sch) => this._t[sch.name] || sch.name;
+  }
+}
+class TCControlEditor extends TCEditor { static fields = ["theme", "language"]; }
+class TCRoomEditor extends TCEditor { static fields = ["entity", "show_overrides", "show_start_stop", "theme", "language"]; }
+class TCOverviewEditor extends TCEditor { static fields = ["show_overrides", "show_start_stop", "theme", "language"]; }
+for (const [tag, cls] of [["thermocore-control-card-editor", TCControlEditor], ["thermocore-room-card-editor", TCRoomEditor], ["thermocore-overview-card-editor", TCOverviewEditor]]) {
+  customElements.get(tag) || customElements.define(tag, cls);
+}
+ThermoCoreControlCard.getConfigElement = () => document.createElement("thermocore-control-card-editor");
+ThermoCoreRoomCard.getConfigElement = () => document.createElement("thermocore-room-card-editor");
+ThermoCoreOverviewCard.getConfigElement = () => document.createElement("thermocore-overview-card-editor");
 
 customElements.get("thermocore-control-card") || customElements.define("thermocore-control-card", ThermoCoreControlCard);
 customElements.get("thermocore-room-card") || customElements.define("thermocore-room-card", ThermoCoreRoomCard);
