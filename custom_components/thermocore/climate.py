@@ -62,7 +62,7 @@ class RoomClimate(ThermoCoreEntity, ClimateEntity):
     @property
     def hvac_action(self) -> HVACAction:
         r = self._room
-        if not r.enabled or not self.ctrl.regulating:
+        if not r.enabled or not self.ctrl.active:
             return HVACAction.OFF
         return HVACAction.HEATING if r.demand else HVACAction.IDLE
 
@@ -76,6 +76,7 @@ class RoomClimate(ThermoCoreEntity, ClimateEntity):
             "hysteresis_overridden": r.ov_hyst_on,
             "pump": self.ctrl.pumps[r.pump].name if r.pump in self.ctrl.pumps else None,
             "observe_only": self.ctrl.observe_only,
+            "manual_on": r.manual_on,
             "api_version": self.ctrl.api_version,
         }
 

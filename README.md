@@ -16,7 +16,10 @@
 ## How it regulates / Regelung
 
 - Heat when `current < target − hysteresis`, stop when `current ≥ target`, keep state in between.
-- Operating mode: **Winter** (regulates), **Summer** (valves and pumps off), **Manual** (ThermoCore never switches).
+- Operating mode:
+  - **Winter** – automatic regulation.
+  - **Manual** – no temperature regulation; each room is switched by hand (room card status button or the room's *Manual heating* switch). The pump follows: on with lead time, off after follow-up time once no room needs it. Rooms heating when you switch from Winter stay on.
+  - **Summer** / **Heating off** – everything is switched off once, then ThermoCore is completely passive (no regulation, no failsafe) so relays can be used freely.
 - Pump starts after its lead time (valves open first) and keeps running for its follow-up time.
 - Sensor or relay unavailable → valve closed, repair issue after 5 minutes.
 - Every 5 minutes the desired states are enforced again (failsafe).

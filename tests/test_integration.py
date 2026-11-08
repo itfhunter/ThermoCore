@@ -114,18 +114,62 @@ async def test_observe_mode_never_switches(hass, calls):
     assert hass.states.get(_eid(hass, "room", "r1")).attributes["heat_demand"] is True
 
 
-async def test_summer_and_manual_modes(hass, calls):
+async def test_summer_is_dead_after_one_shutdown(hass, calls):
     await _setup(hass, temp="19.0", valve="on", pump="on")
     mode = _eid(hass, "operating_mode")
     calls["off"].clear()
     await hass.services.async_call("select", "select_option", {"entity_id": mode, "option": "summer"}, blocking=True)
-    assert VALVE in _switched(calls, "off") and PUMP in _switched(calls, "off")
-    # Manuell: ThermoCore schaltet gar nichts
-    await hass.services.async_call("select", "select_option", {"entity_id": mode, "option": "manual"}, blocking=True)
+    assert VALVE in _switched(calls, "off") and PUMP in _switched(calls, "off")  # einmalig aus
+    # danach tot: Ventil von Hand an -> ThermoCore greift nicht ein, auch nicht beim Failsafe
     calls["on"].clear(); calls["off"].clear()
-    hass.states.async_set(TEMP, "15.0")
+    hass.states.async_set(VALVE, "on"); hass.states.async_set(TEMP, "15.0")
     await hass.async_block_till_done()
-    assert VALVE not in _switched(calls, "on") + _switched(calls, "off")
+    entry = hass.config_entries.async_entries("thermocore")[0]
+    entry.runtime_data.evaluate(enforce=True)
+    await hass.async_block_till_done()
+    assert _switched(calls, "on") == [] and _switched(calls, "off") == []
+
+
+async def test_heating_off_is_dead(hass, calls):
+    await _setup(hass, temp="19.0", valve="on", pump="on")
+    calls["off"].clear()
+    await hass.services.async_call("switch", "turn_off", {"entity_id": _eid(hass, "heating")}, blocking=True)
+    assert VALVE in _switched(calls, "off")
+    calls["on"].clear(); calls["off"].clear()
+    hass.states.async_set(VALVE, "on")
+    await hass.async_block_till_done()
+    assert _switched(calls, "on") == [] and _switched(calls, "off") == []
+
+
+async def test_manual_mode_room_button(hass, calls):
+    """Manuell: keine Regelung; Raum-Knopf schaltet Ventil + Pumpe, erneut drücken schaltet ab."""
+    await _setup(hass, temp="19.0")  # zu kalt -> heizt im Winter
+    mode, btn = _eid(hass, "operating_mode"), _eid(hass, "manual_heat", "r1")
+    # Winter -> Manuell: heizender Raum bleibt an
+    await hass.services.async_call("select", "select_option", {"entity_id": mode, "option": "manual"}, blocking=True)
+    assert hass.states.get(btn).state == "on"
+    calls["on"].clear(); calls["off"].clear()
+    hass.states.async_set(VALVE, "on"); hass.states.async_set(PUMP, "on")
+    # Knopf aus -> Ventil zu, Pumpe aus (kein anderer Raum)
+    await hass.services.async_call("switch", "turn_off", {"entity_id": btn}, blocking=True)
+    await hass.async_block_till_done()
+    assert VALVE in _switched(calls, "off") and PUMP in _switched(calls, "off")
+    # Temperatur ändert sich -> keine Regelung im Handbetrieb
+    hass.states.async_set(VALVE, "off"); hass.states.async_set(PUMP, "off")
+    calls["on"].clear()
+    hass.states.async_set(TEMP, "15.0"); await hass.async_block_till_done()
+    assert _switched(calls, "on") == []
+    # Knopf an -> Ventil + Pumpe an, obwohl Raum warm genug wäre
+    hass.states.async_set(TEMP, "25.0")
+    await hass.services.async_call("switch", "turn_on", {"entity_id": btn}, blocking=True)
+    await hass.async_block_till_done()
+    assert VALVE in _switched(calls, "on") and PUMP in _switched(calls, "on")
+    assert hass.states.get(_eid(hass, "room", "r1")).attributes["hvac_action"] == "heating"
+
+
+async def test_manual_button_unavailable_in_winter(hass, calls):
+    await _setup(hass, temp="21.5")
+    assert hass.states.get(_eid(hass, "manual_heat", "r1")).state == "unavailable"
 
 
 async def test_room_stop_closes_valve(hass, calls):
@@ -171,3 +215,36 @@ async def test_demand_event_fired(hass, calls):
     await _setup(hass, temp="19.0")
     await hass.async_block_till_done()
     assert events and events[-1]["demand"] is True and events[-1]["api_version"] == 1
+
+
+async def test_manual_pump_stays_on_while_other_room_needs_it(hass, calls):
+    """Zwei Räume an einer Pumpe: einen ausschalten -> Pumpe läuft weiter; beide aus -> Pumpe aus."""
+    valve2, temp2 = "input_boolean.example_room2_valve", "sensor.example_room2_temperature"
+    hass.states.async_set(TEMP, "22.0", {"device_class": "temperature"})
+    hass.states.async_set(temp2, "22.0", {"device_class": "temperature"})
+    for e in (VALVE, valve2, PUMP):
+        hass.states.async_set(e, "off")
+    room = lambda sid, t, v: ConfigSubentryData(data={"area_id": sid, "room_type": "heating", "temp_sensor": t, "heat_switch": v,
+                                                      "pump_subentry_id": "p1"}, subentry_id=sid, subentry_type="room", title=sid, unique_id=None)
+    entry = MockConfigEntry(domain=DOMAIN, unique_id=DOMAIN, title="ThermoCore",
+                            options={"target_temp": 21.0, "hysteresis": 0.2, "observe_only": False},
+                            subentries_data=[room("r1", TEMP, VALVE), room("r2", temp2, valve2),
+                                             ConfigSubentryData(data={"name": "P", "pump_switch": PUMP, "lead_time": 0, "follow_time": 0},
+                                                                subentry_id="p1", subentry_type="pump", title="P", unique_id=None)])
+    entry.add_to_hass(hass)
+    assert await hass.config_entries.async_setup(entry.entry_id)
+    await hass.async_block_till_done()
+    await hass.services.async_call("select", "select_option", {"entity_id": _eid(hass, "operating_mode"), "option": "manual"}, blocking=True)
+    for sid in ("r1", "r2"):
+        await hass.services.async_call("switch", "turn_on", {"entity_id": _eid(hass, "manual_heat", sid)}, blocking=True)
+    await hass.async_block_till_done()
+    for e in (VALVE, valve2, PUMP):
+        hass.states.async_set(e, "on")
+    await hass.async_block_till_done()
+    calls["off"].clear()
+    await hass.services.async_call("switch", "turn_off", {"entity_id": _eid(hass, "manual_heat", "r1")}, blocking=True)
+    await hass.async_block_till_done()
+    assert VALVE in _switched(calls, "off") and PUMP not in _switched(calls, "off")  # Raum 2 braucht die Pumpe noch
+    await hass.services.async_call("switch", "turn_off", {"entity_id": _eid(hass, "manual_heat", "r2")}, blocking=True)
+    await hass.async_block_till_done()
+    assert valve2 in _switched(calls, "off") and PUMP in _switched(calls, "off")

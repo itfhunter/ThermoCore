@@ -94,7 +94,7 @@ Liegt in HA: 8 Raum-Automationen per Blueprint `claude/heizung.yaml`, min_max-Sc
 ### Verhalten (wichtig für Weiterarbeit)
 - Hysterese: Heizen ab Ist < Soll − Hysterese, Stopp ab Ist ≥ Soll, dazwischen bleibt Zustand.
 - Heizen nur wenn: Betriebsart Winter UND Heizung an UND Raum aktiv UND Messwert gültig.
-- Sommer / Heizung aus: Ventile und Pumpen werden aus­geschaltet. Manuell: ThermoCore schaltet gar nichts. Beobachtungsmodus: rechnet alles, schaltet nichts.
+- Sommer / Heizung aus: einmal alles aus, danach tot. Manuell: nur Raum-Knöpfe (siehe v0.1.3). Beobachtungsmodus: rechnet alles, schaltet nichts.
 - Soll am Thermostat setzen = Raum-Override einschalten mit diesem Wert.
 - Globale Werte/Overrides liegen im HA-Store `.storage/thermocore.<entry_id>`. Ändert man Soll/Hysterese im Konfigurationsdialog, gewinnt der Dialog; sonst der zuletzt per Entität/Karte gesetzte Wert.
 - Relais werden über `<domain>.turn_on/off` der jeweiligen Entität geschaltet (nicht nur `switch`).
@@ -123,6 +123,10 @@ Liegt in HA: 8 Raum-Automationen per Blueprint `claude/heizung.yaml`, min_max-Sc
   - Beobachtung beim Umschalten: alte Flur-Automation hatte 1 Min vorher Flur-Ventil + Pumpe eingeschaltet; ThermoCore schloss das Ventil sofort (kein Bedarf), Pumpe läuft Nachlauf.
 - **v0.1.1 (2026-11-08):** Raumkarte – Klick auf Override-Wert öffnet Slider im Kartendesign (Wert groß, −/+ in 0,1-Schritten, Ziehen; Setzen schaltet Override automatisch ein; kein Neuzeichnen während des Ziehens – vorher überschrieb jedes HA-Update das Zahlenfeld). Dazu Fixes native_*-Climate-Eigenschaften und via_device. Auf Hunters Anweisung gepusht → Auto-Release.
 - **v0.1.2 (lokal, NICHT gepusht – wartet auf Release-Befehl):** visuelle Editoren für alle 3 Karten (HA `ha-form`, de/en; Raumkarte: Raum-Auswahl nur ThermoCore-Thermostate, Overrides/Aktiv-Stopp/Design/Sprache; Übersicht: Overrides/Aktiv-Stopp/Design/Sprache; Steuerung: Design/Sprache). Editor schreibt nur eigene Felder, „Sprache automatisch“ entfernt den Schlüssel. Übersicht bricht nach Kartenbreite um (Container-Query) statt Fensterbreite. Getestet mit ha-form-Attrappe im Browser; echtes ha-form erst in HA prüfbar.
+- **v0.1.3 (lokal, NICHT gepusht – wartet auf Release-Befehl; enthält auch v0.1.2):** Betriebsarten neu nach Hunters Vorgabe:
+  - Manuell: keine Temperaturregelung; je Raum Schalter `manual_heat` („Manuell heizen“, nur im Handbetrieb verfügbar). Karte: Status-Feld wird Knopf (Hand-Symbol). Ventil an/aus, Pumpe mit Vorlauf/Nachlauf, aus nur wenn kein anderer Raum sie braucht. Wechsel Winter→Manuell: heizende Räume bleiben an. Manuell verlassen: Handschaltungen vergessen.
+  - Sommer / Heizung aus: beim Wechsel EINMAL alles aus, danach komplett tot (kein Schalten, kein Failsafe). Nach HA-Neustart im Sommer keine Abschaltung.
+  - 27 Tests grün (u. a. zwei Räume an einer Pumpe im Handbetrieb).
 - Offene Frage an Hunter: deutsche Bezeichnung „Hysterese“ → „Schaltdifferenz“ umbenennen?
 - **Playbook offen:** HA-Playbook konnte nicht aktualisiert werden (PC-Shell startete nicht, Projektkopie „Local AI“ in diesem Projekt nicht erreichbar). Nachholen: ThermoCore, Dashboard `dashboard-thermocore`, Beobachtungsmodus parallel zu den 11 alten Heizungs-Automationen.
 

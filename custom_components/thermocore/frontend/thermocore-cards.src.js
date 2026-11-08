@@ -1,5 +1,5 @@
 /* ThermoCore Dashboard-Karten (de/en, Design dark/light/auto). Icons werden beim Build eingesetzt (__ICONS__). */
-const TC_VERSION = "0.1.2";
+const TC_VERSION = "0.1.3";
 const ICONS = __ICONS__;
 
 const I18N = {
@@ -9,7 +9,7 @@ const I18N = {
     pump: "Pumpe", running: "Läuft", standby: "Standby", heats: "Heizt", stopped: "Gestoppt", error: "Fehler",
     actual: "Ist", target: "Soll", ovTarget: "Soll überschreiben", ovHyst: "Hysterese überschreiben",
     yes: "Ja", no: "Nein", active: "Aktiv", stop: "Stopp", notFound: "ThermoCore nicht gefunden",
-    noEntity: "Entität nicht gefunden", observe: "Beobachtungsmodus",
+    noEntity: "Entität nicht gefunden", observe: "Beobachtungsmodus", manualHint: "Klicken: Raum manuell heizen / stoppen",
   },
   en: {
     control: "Heating control", rooms: "Rooms", base: "Base target temperature", hyst: "Hysteresis",
@@ -17,7 +17,7 @@ const I18N = {
     pump: "Pump", running: "Running", standby: "Standby", heats: "Heating", stopped: "Stopped", error: "Error",
     actual: "Current", target: "Target", ovTarget: "Override target", ovHyst: "Override hysteresis",
     yes: "Yes", no: "No", active: "Active", stop: "Stop", notFound: "ThermoCore not found",
-    noEntity: "Entity not found", observe: "Observe mode",
+    noEntity: "Entity not found", observe: "Observe mode", manualHint: "Click: heat room manually / stop",
   },
 };
 
@@ -43,6 +43,9 @@ ha-card,.card{background:var(--tc-card);color:var(--tc-text);border:1px solid va
 .badge{margin-left:auto;font-size:13px;padding:4px 12px;border-radius:999px;background:var(--tc-seg);color:var(--tc-muted);white-space:nowrap}
 .badge.heat{background:color-mix(in srgb,var(--tc-heat) 22%,transparent);color:var(--tc-heat)}
 .badge.err{background:color-mix(in srgb,var(--tc-err) 22%,transparent);color:var(--tc-err)}
+.badge.click{cursor:pointer;display:inline-flex;align-items:center;gap:6px;border:1px solid var(--tc-accent);color:var(--tc-text)}
+.badge.click .ic{width:14px;height:14px}
+.badge.click.heat{border-color:var(--tc-heat)}
 .badge.run{background:color-mix(in srgb,var(--tc-ok) 22%,transparent);color:var(--tc-ok)}
 button{font:inherit;color:inherit;background:none;border:0;cursor:pointer;padding:0}
 .rbtn{width:40px;height:40px;border-radius:50%;display:grid;place-items:center;color:var(--tc-accent)}
@@ -267,6 +270,12 @@ function roomHTML(card, climateId, cfg) {
   const k = (key) => card._byKey(key, dev);
   const a = s.attributes || {}, off = s.state === "off", unav = s.state === "unavailable";
   const status = unav ? ["err", t.error] : off ? ["", t.stopped] : a.hvac_action === "heating" ? ["heat", t.heats] : ["", t.standby];
+  /* Handbetrieb: Status-Feld wird zum Knopf (Raum an/aus inkl. Pumpe) */
+  const manSw = k("manual_heat"), manSt = card._st(manSw);
+  const manual = manSt && manSt.state !== "unavailable" && !off && !unav;
+  const badge = manual
+    ? `<button class="badge click ${status[0]}" data-act="toggle" data-id="${manSw}" title="${t.manualHint}">${ic("manual")}${status[1]}</button>`
+    : `<span class="badge ${status[0]}">${status[1]}</span>`;
   const ovRow = (label, swKey, numKey) => {
     const sw = k(swKey), num = k(numKey), on = card._st(sw)?.state === "on", ns = card._st(num);
     if (!sw || !num) return "";
@@ -277,7 +286,7 @@ function roomHTML(card, climateId, cfg) {
   };
   return `<div class="card ${a.hvac_action === "heating" && !off ? "selected" : ""}">
     <div class="room-head" style="color:${a.hvac_action === "heating" && !off ? "var(--tc-heat)" : "var(--tc-text)"}">${ic("radiator")}
-      <span class="name" style="color:var(--tc-text)">${a.friendly_name || climateId}</span><span class="badge ${status[0]}">${status[1]}</span></div>
+      <span class="name" style="color:var(--tc-text)">${a.friendly_name || climateId}</span>${badge}</div>
     <div class="temps"><span>${t.actual}: <b>${fmt(a.current_temperature)} °C</b></span><span class="muted">|</span><span>${t.target}: <b>${fmt(a.temperature)} °C</b></span></div>
     ${cfg.show_overrides ? ovRow(t.ovTarget, "override_target", "target_override") + ovRow(t.ovHyst, "override_hysteresis", "hysteresis_override") : ""}
     ${cfg.show_start_stop ? `<div class="seg wide startstop"><button class="${off ? "" : "on"}" data-act="hvac" data-opt="heat" data-id="${climateId}">${t.active}</button><button class="${off ? "on" : ""}" data-act="hvac" data-opt="off" data-id="${climateId}">${t.stop}</button></div>` : ""}

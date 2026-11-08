@@ -134,6 +134,9 @@
       },
       "override_hysteresis": {
         "name": "Hysterese überschreiben"
+      },
+      "manual_heat": {
+        "name": "Manuell heizen"
       }
     },
     "select": {

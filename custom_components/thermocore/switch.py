@@ -10,7 +10,7 @@ from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .entity import ThermoCoreEntity
 
-_ROOM = {"override_target": "ov_target_on", "override_hysteresis": "ov_hyst_on"}
+_ROOM = {"override_target": "ov_target_on", "override_hysteresis": "ov_hyst_on", "manual_heat": "manual_on"}
 
 
 async def async_setup_entry(hass: HomeAssistant, entry, async_add_entities: AddConfigEntryEntitiesCallback) -> None:
@@ -24,6 +24,11 @@ class TCSwitch(ThermoCoreEntity, SwitchEntity):
     def __init__(self, ctrl, key: str, attr: str, sid=None, name=None) -> None:
         super().__init__(ctrl, key, sid, name)
         self._attr = attr
+
+    @property
+    def available(self) -> bool:
+        """'Manuell heizen' ist nur im Handbetrieb bedienbar."""
+        return self._attr != "manual_on" or self.ctrl.manual
 
     @property
     def is_on(self) -> bool:

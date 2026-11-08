@@ -49,6 +49,7 @@ from .const import (
     DOMAIN,
     EVENT_ROOM_DEMAND,
     MODE_MANUAL,
+    MODE_SUMMER,
     MODE_WINTER,
     STORAGE_VERSION,
     SUBENTRY_PUMP,
@@ -73,6 +74,7 @@ class Room:
     ov_target: float = DEFAULT_TARGET_TEMP
     ov_hyst_on: bool = False
     ov_hyst: float = DEFAULT_HYSTERESIS
+    manual_on: bool = False  # Handbetrieb: Raum per Knopf an
     # Laufzeit
     current: float | None = None
     demand: bool = False
@@ -111,6 +113,7 @@ class ThermoCoreController:
         self._store = Store(hass, STORAGE_VERSION, f"{DOMAIN}.{entry.entry_id}")
         self._unsubs: list[CALLBACK_TYPE] = []
         self._pump_timer: CALLBACK_TYPE | None = None
+        self._was_active: bool | None = None  # für einmaliges Abschalten beim Wechsel in Sommer/Heizung aus
 
         for sid, sub in entry.subentries.items():
             d = sub.data
@@ -168,6 +171,7 @@ class ThermoCoreController:
                 r.ov_target = float(rd.get("ov_target", r.ov_target))
                 r.ov_hyst_on = rd.get("ov_hyst_on", r.ov_hyst_on)
                 r.ov_hyst = float(rd.get("ov_hyst", r.ov_hyst))
+                r.manual_on = bool(rd.get("manual_on", False)) and self.mode == MODE_MANUAL
 
     def _save(self) -> None:
         self._store.async_delay_save(self._dump, 2)
@@ -178,13 +182,18 @@ class ThermoCoreController:
             "global": {"base_target": self.base_target, "hysteresis": self.hysteresis, "heating": self.heating, "mode": self.mode},
             "rooms": {
                 sid: {"enabled": r.enabled, "ov_target_on": r.ov_target_on, "ov_target": r.ov_target,
-                      "ov_hyst_on": r.ov_hyst_on, "ov_hyst": r.ov_hyst}
+                      "ov_hyst_on": r.ov_hyst_on, "ov_hyst": r.ov_hyst, "manual_on": r.manual_on}
                 for sid, r in self.rooms.items()
             },
         }
 
     # ---------- Setter für Entitäten ----------
     def set_global(self, **kw: Any) -> None:
+        new_mode = kw.get("mode", self.mode)
+        if new_mode != self.mode:
+            for r in self.rooms.values():
+                # Winter -> Manuell: was gerade heizt, bleibt an. Manuell verlassen: Handschaltungen vergessen.
+                r.manual_on = r.demand if new_mode == MODE_MANUAL else False
         for k, v in kw.items():
             setattr(self, k, v)
         self._save()
@@ -205,9 +214,19 @@ class ThermoCoreController:
         return logic.effective(self.hysteresis, r.ov_hyst_on, r.ov_hyst)
 
     @property
+    def active(self) -> bool:
+        """Lebt ThermoCore? Sommer oder Heizung aus = komplett tot (schaltet nichts)."""
+        return self.heating and self.mode != MODE_SUMMER
+
+    @property
     def regulating(self) -> bool:
-        """Regelt ThermoCore gerade aktiv? (Winter + Heizung an)"""
+        """Automatische Temperaturregelung? (nur Winter + Heizung an)"""
         return self.heating and self.mode == MODE_WINTER
+
+    @property
+    def manual(self) -> bool:
+        """Handbetrieb: Räume werden nur per Knopf geschaltet."""
+        return self.heating and self.mode == MODE_MANUAL
 
     def pump_power(self, p: Pump) -> float | None:
         st = self.hass.states.get(p.power_sensor) if p.power_sensor else None
@@ -233,8 +252,12 @@ class ThermoCoreController:
             r.current = self._temp(r.sensor)
             self._track_unavailable(r, now)
             prev = r.demand
-            active = self.regulating and r.enabled
-            r.demand = logic.room_demand(r.current, self.room_target(r), self.room_hyst(r), prev) if active else False
+            if self.regulating and r.enabled:
+                r.demand = logic.room_demand(r.current, self.room_target(r), self.room_hyst(r), prev)
+            elif self.manual and r.enabled:
+                r.demand = r.manual_on
+            else:
+                r.demand = False
             r.want_valve = r.demand
             if r.demand != prev:
                 self.hass.bus.async_fire(EVENT_ROOM_DEMAND, {
@@ -248,7 +271,7 @@ class ThermoCoreController:
         wake: float | None = None
         for p in self.pumps.values():
             p.demand = any(r.demand for r in self.rooms.values() if r.pump == p.sid)
-            if not self.regulating:  # Sommer/aus: Pumpe sofort aus, Timer zurücksetzen
+            if not self.active:  # Sommer/aus: tot, Timer zurücksetzen
                 p.state = logic.PumpState()
                 p.want_on = False
                 continue
@@ -259,11 +282,18 @@ class ThermoCoreController:
         if wake is not None:
             self._pump_timer = async_call_later(self.hass, wake + 0.1, self._on_pump_timer)
 
-        if not self.observe_only and self.mode != MODE_MANUAL:
-            for r in self.rooms.values():
-                self._apply(r.valve, r.want_valve)
-            for p in self.pumps.values():
-                self._apply(p.switch, p.want_on)
+        was, self._was_active = self._was_active, self.active
+        if not self.observe_only:
+            if self.active:
+                for r in self.rooms.values():
+                    self._apply(r.valve, r.want_valve)
+                for p in self.pumps.values():
+                    self._apply(p.switch, p.want_on)
+            elif was:  # gerade in Sommer / Heizung aus gewechselt: einmalig alles aus, danach tot
+                for r in self.rooms.values():
+                    self._apply(r.valve, False)
+                for p in self.pumps.values():
+                    self._apply(p.switch, False)
 
         async_dispatcher_send(self.hass, signal_update(self.entry.entry_id))
 
