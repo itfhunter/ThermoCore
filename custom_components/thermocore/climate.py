@@ -11,6 +11,9 @@ from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .entity import ThermoCoreEntity
 
+# Ab HA 2026.11 heißen die Temperatur-Eigenschaften native_*; ältere Versionen kennen nur die alten Namen.
+_NATIVE = hasattr(ClimateEntity, "native_current_temperature")
+
 
 async def async_setup_entry(hass: HomeAssistant, entry, async_add_entities: AddConfigEntryEntitiesCallback) -> None:
     ctrl = entry.runtime_data
@@ -21,7 +24,6 @@ async def async_setup_entry(hass: HomeAssistant, entry, async_add_entities: AddC
 class RoomClimate(ThermoCoreEntity, ClimateEntity):
     _attr_name = None  # Gerätename = Raumname
     _attr_hvac_modes = [HVACMode.HEAT, HVACMode.OFF]
-    _attr_temperature_unit = UnitOfTemperature.CELSIUS
     _attr_target_temperature_step = 0.1
     _attr_min_temp = 5
     _attr_max_temp = 30
@@ -31,18 +33,27 @@ class RoomClimate(ThermoCoreEntity, ClimateEntity):
 
     def __init__(self, ctrl, sid: str, name: str) -> None:
         super().__init__(ctrl, "room", sid, name)
+        if _NATIVE:
+            self._attr_native_temperature_unit = UnitOfTemperature.CELSIUS
+        else:
+            self._attr_temperature_unit = UnitOfTemperature.CELSIUS
 
     @property
     def _room(self):
         return self.ctrl.rooms[self.sid]
 
-    @property
-    def current_temperature(self) -> float | None:
+    def _current(self) -> float | None:
         return self._room.current
 
-    @property
-    def target_temperature(self) -> float:
+    def _target(self) -> float:
         return self.ctrl.room_target(self._room)
+
+    if _NATIVE:
+        native_current_temperature = property(_current)
+        native_target_temperature = property(_target)
+    else:
+        current_temperature = property(_current)
+        target_temperature = property(_target)
 
     @property
     def hvac_mode(self) -> HVACMode:
