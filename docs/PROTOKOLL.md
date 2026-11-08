@@ -1,6 +1,6 @@
 # ThermoCore – Entwicklungsprotokoll / Übergabe
 
-Stand: 2026-11-08 (auf GitHub, Release v0.1.0 durch Hunter auszulösen) · Repo: github.com/itfhunter/ThermoCore (leer, NICHTS gepusht)
+Stand: 2026-11-08 (auf GitHub, Auto-Release aktiv) · Repo: github.com/itfhunter/ThermoCore (leer, NICHTS gepusht)
 
 ## Harte Regeln (vom Nutzer)
 - **Nie pushen/releasen ohne ausdrücklichen Release-Befehl von Hunter.** Release erfolgt dann automatisch über `.github/workflows/release.yml` (workflow_dispatch mit Version → Tag + GitHub-Release + ZIP für HACS).
@@ -103,8 +103,9 @@ Liegt in HA: 8 Raum-Automationen per Blueprint `claude/heizung.yaml`, min_max-Sc
 ## Veröffentlichung (2026-11-08)
 - Release-Befehl von Hunter erhalten → Code auf `main` gepusht (Commit 2f2a7ce). Repo öffentlich.
 - GitHub-Prüfungen: hassfest ✅, Tests ✅ (23), HACS ✅ bis auf „Topics“ (nur für HACS-Standardliste nötig, nicht für benutzerdefiniertes Repo).
-- Release: Workflow läuft per Tag-Push `v*` ODER manuell (Actions → Release → Run workflow, Version eingeben).
-  Aus der Claude-Sitzung sind Tag-Pushes per Proxy gesperrt (403) und die gh-CLI hat kein Token → **Hunter löst v0.1.0 manuell aus.**
+- **Auto-Release:** Jeder Push auf `main` liest `version` aus `manifest.json`; existiert dazu kein Release, laufen Tests, dann Tag + Release + `thermocore.zip` (HACS lädt diese ZIP).
+  → Neue Version = Version im Manifest erhöhen + pushen (nur nach Release-Befehl von Hunter!). Tags müssen NICHT gepusht werden (aus Claude-Sitzung ohnehin per Proxy gesperrt).
+- Erste HACS-Installation scheiterte (404 auf `releases/download/main/thermocore.zip`), weil noch kein Release existierte → Grund für Auto-Release.
 - Logo: `custom_components/thermocore/brand/icon.png` (+@2x) aus Hunters rotem Heizkörper-Icon.
 - Nach Installation in Hunters HA: HA-Playbook (`playbooks/HA/PLAYBOOK.md`) um ThermoCore ergänzen (Regeln in `_REGELN.md`).
 

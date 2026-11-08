@@ -1,37 +1,53 @@
 name: Release
-# Automatischer Release, ausgelöst durch:
-#  - Tag-Push "v<Version>" (z. B. git tag v0.1.1 && git push origin v0.1.1)
-#  - oder manuell: GitHub > Actions > Release > "Run workflow" mit Version
+# Auto-Release: Bei jedem Push auf main wird die Version aus manifest.json gelesen.
+# Gibt es dafür noch keinen Release, werden Tests ausgeführt und danach Tag + Release + thermocore.zip erzeugt.
+# Neue Version veröffentlichen = "version" in custom_components/thermocore/manifest.json erhöhen und pushen.
 on:
   push:
-    tags: ["v*"]
+    branches: [main]
   workflow_dispatch:
-    inputs:
-      version:
-        description: "Version (ohne v), z. B. 0.1.1"
-        required: true
 permissions:
   contents: write
+concurrency:
+  group: release
+  cancel-in-progress: false
 jobs:
+  check:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.v.outputs.version }}
+      exists: ${{ steps.v.outputs.exists }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: v
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          V=$(jq -r .version custom_components/thermocore/manifest.json)
+          echo "version=$V" >> "$GITHUB_OUTPUT"
+          if gh release view "v$V" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"; echo "Release v$V existiert bereits – nichts zu tun."
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"; echo "Neuer Release v$V wird erstellt."
+          fi
   release:
+    needs: check
+    if: needs.check.outputs.exists == 'false'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Version bestimmen
-        id: v
-        run: |
-          if [ -n "${{ inputs.version }}" ]; then V="${{ inputs.version }}"; else V="${GITHUB_REF_NAME#v}"; fi
-          echo "version=$V" >> "$GITHUB_OUTPUT"
-      - name: Version in manifest setzen
-        run: |
-          jq --arg v "${{ steps.v.outputs.version }}" '.version=$v' custom_components/thermocore/manifest.json > m.tmp
-          mv m.tmp custom_components/thermocore/manifest.json
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Tests
+        run: pip install -q pytest-homeassistant-custom-component && python -m pytest -q tests
       - name: ZIP bauen
         run: cd custom_components/thermocore && zip -r ../../thermocore.zip . -x '__pycache__/*' -x 'frontend/*.src.js'
       - name: Release erstellen
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v${{ steps.v.outputs.version }}
-          name: ThermoCore ${{ steps.v.outputs.version }}
+          tag_name: v${{ needs.check.outputs.version }}
+          target_commitish: ${{ github.sha }}
+          name: ThermoCore ${{ needs.check.outputs.version }}
           generate_release_notes: true
           files: thermocore.zip
