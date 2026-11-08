@@ -1,10 +1,14 @@
 name: Release
-# Nur manuell: GitHub > Actions > Release > "Run workflow" mit Version (z. B. 0.1.0)
+# Automatischer Release, ausgelöst durch:
+#  - Tag-Push "v<Version>" (z. B. git tag v0.1.1 && git push origin v0.1.1)
+#  - oder manuell: GitHub > Actions > Release > "Run workflow" mit Version
 on:
+  push:
+    tags: ["v*"]
   workflow_dispatch:
     inputs:
       version:
-        description: "Version (ohne v), z. B. 0.1.0"
+        description: "Version (ohne v), z. B. 0.1.1"
         required: true
 permissions:
   contents: write
@@ -13,16 +17,21 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Version bestimmen
+        id: v
+        run: |
+          if [ -n "${{ inputs.version }}" ]; then V="${{ inputs.version }}"; else V="${GITHUB_REF_NAME#v}"; fi
+          echo "version=$V" >> "$GITHUB_OUTPUT"
       - name: Version in manifest setzen
         run: |
-          jq --arg v "${{ inputs.version }}" '.version=$v' custom_components/thermocore/manifest.json > m.tmp
+          jq --arg v "${{ steps.v.outputs.version }}" '.version=$v' custom_components/thermocore/manifest.json > m.tmp
           mv m.tmp custom_components/thermocore/manifest.json
       - name: ZIP bauen
-        run: cd custom_components/thermocore && zip -r ../../thermocore.zip . -x '__pycache__/*'
+        run: cd custom_components/thermocore && zip -r ../../thermocore.zip . -x '__pycache__/*' -x 'frontend/*.src.js'
       - name: Release erstellen
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v${{ inputs.version }}
-          name: ThermoCore ${{ inputs.version }}
+          tag_name: v${{ steps.v.outputs.version }}
+          name: ThermoCore ${{ steps.v.outputs.version }}
           generate_release_notes: true
           files: thermocore.zip
