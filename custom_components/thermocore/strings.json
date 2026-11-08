@@ -91,9 +91,15 @@
   "selector": {
     "room_type": {
       "options": {
-        "floor": "Underfloor heating",
-        "radiator": "Radiator (planned)",
+        "heating": "Heating (underfloor / radiator)",
         "ac": "Air conditioner (planned)"
+      }
+    },
+    "operating_mode": {
+      "options": {
+        "winter": "Winter",
+        "summer": "Summer",
+        "manual": "Manual"
       }
     }
   }

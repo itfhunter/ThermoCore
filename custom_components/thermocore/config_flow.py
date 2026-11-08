@@ -42,7 +42,7 @@ from .const import (
     DEFAULT_PUMP_LEAD,
     DEFAULT_TARGET_TEMP,
     DOMAIN,
-    ROOM_TYPE_FLOOR,
+    ROOM_TYPE_HEATING,
     ROOM_TYPES,
     SUBENTRY_PUMP,
     SUBENTRY_ROOM,
@@ -159,7 +159,7 @@ class RoomSubentryFlow(ConfigSubentryFlow):
         schema = vol.Schema(
             {
                 vol.Required(CONF_AREA): sel.AreaSelector(),
-                vol.Required(CONF_ROOM_TYPE, default=ROOM_TYPE_FLOOR): sel.SelectSelector(
+                vol.Required(CONF_ROOM_TYPE, default=ROOM_TYPE_HEATING): sel.SelectSelector(
                     sel.SelectSelectorConfig(options=ROOM_TYPES, translation_key="room_type", mode="list")
                 ),
             }

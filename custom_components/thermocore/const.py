@@ -26,10 +26,17 @@ CONF_OVERRIDE_TARGET = "override_target"
 CONF_OVERRIDE_HYST = "override_hysteresis"
 CONF_LINKED_CLIMATE = "linked_climate"  # Kopplung an externe Klima-Integration
 
-ROOM_TYPE_FLOOR = "floor"
-ROOM_TYPE_RADIATOR = "radiator"  # geplant
-ROOM_TYPE_AC = "ac"  # geplant
-ROOM_TYPES = [ROOM_TYPE_FLOOR, ROOM_TYPE_RADIATOR, ROOM_TYPE_AC]
+# Fußbodenheizung und Heizkörper verhalten sich gleich (träge, Relais + Hysterese) -> ein Typ.
+ROOM_TYPE_HEATING = "heating"
+ROOM_TYPE_AC = "ac"  # geplant: schneller, braucht Mindestlauf/-pause, Bewegung + Mindesttemp
+ROOM_TYPES = [ROOM_TYPE_HEATING, ROOM_TYPE_AC]
+
+# Betriebsart (Karte 1)
+CONF_OPERATING_MODE = "operating_mode"
+MODE_WINTER = "winter"  # Regelung aktiv
+MODE_SUMMER = "summer"  # Regelung aus, Anti-Blockierlauf
+MODE_MANUAL = "manual"  # Handbetrieb, ThermoCore schaltet nicht
+OPERATING_MODES = [MODE_WINTER, MODE_SUMMER, MODE_MANUAL]
 
 DEFAULT_TARGET_TEMP = 21.0
 DEFAULT_HYSTERESIS = 0.2
